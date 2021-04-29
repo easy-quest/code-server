@@ -409,7 +409,7 @@ jobs:
 
   trivy-scan:
     runs-on: ubuntu-20.04
-    needs: package-linux-arm64
+    needs: package-linux-amd64
 
     steps:
       - name: Checkout code
