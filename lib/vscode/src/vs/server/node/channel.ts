@@ -43,7 +43,7 @@ import { ExtensionScanner, ExtensionScannerInput } from 'vs/workbench/services/e
 class Watcher extends DiskFileSystemProvider {
 	public readonly watches = new Map<number, IDisposable>();
 
-	public dispose(): void {
+	public override dispose(): void {
 		this.watches.forEach((w) => w.dispose());
 		this.watches.clear();
 		super.dispose();
@@ -263,6 +263,7 @@ export class ExtensionEnvironmentChannel implements IServerChannel {
 			globalStorageHome: this.environment.globalStorageHome,
 			workspaceStorageHome: this.environment.workspaceStorageHome,
 			userHome: this.environment.userHome,
+			useHostProxy: false,
 			os: platform.OS,
 			marks: []
 		};
@@ -382,7 +383,7 @@ class VariableResolverService extends AbstractVariableResolverService {
 			getLineNumber: (): string | undefined => {
 				return args.resolvedVariables.selectedText;
 			},
-		}, undefined, env);
+		}, undefined, Promise.resolve(env));
 	}
 }
 
@@ -442,6 +443,7 @@ class Terminal extends TerminalProcess {
 			workspaceId: this.workspaceId,
 			workspaceName: this.workspaceName,
 			isOrphan: this.isOrphan,
+			icon: 'bash' // TODO@oxy: currently unused by vscode
 		};
 	}
 }
@@ -472,8 +474,7 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 
 	// Buffer to reduce the number of messages going to the renderer.
 	private readonly bufferer = new TerminalDataBufferer((id, data) => {
-		// TODO: Not sure what sync means.
-		this._onProcessData.fire({ id, event: { data, sync: true }});
+		this._onProcessData.fire({ id, event: data });
 	});
 
 	public constructor (private readonly logService: ILogService) {}
@@ -564,27 +565,26 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 			toResource: (relativePath: string) => resources.joinPath(activeWorkspaceUri, relativePath),
 		} : undefined;
 
-		const resolverService = new VariableResolverService(remoteAuthority, args, process.env as platform.IProcessEnvironment);
-		const resolver = terminalEnvironment.createVariableResolver(activeWorkspace, resolverService);
+		const resolverService = new VariableResolverService(remoteAuthority, args, process.env);
+		const resolver = terminalEnvironment.createVariableResolver(activeWorkspace, process.env, resolverService);
 
 		const getDefaultShellAndArgs = async (): Promise<{ executable: string; args: string[] | string }> => {
 			if (shellLaunchConfig.executable) {
-				const executable = resolverService.resolve(activeWorkspace, shellLaunchConfig.executable);
+				const executable = await resolverService.resolveAsync(activeWorkspace, shellLaunchConfig.executable);
 				let resolvedArgs: string[] | string = [];
 				if (shellLaunchConfig.args && Array.isArray(shellLaunchConfig.args)) {
 					for (const arg of shellLaunchConfig.args) {
-						resolvedArgs.push(resolverService.resolve(activeWorkspace, arg));
+						resolvedArgs.push(await resolverService.resolveAsync(activeWorkspace, arg));
 					}
 				} else if (shellLaunchConfig.args) {
-					resolvedArgs = resolverService.resolve(activeWorkspace, shellLaunchConfig.args);
+					resolvedArgs = await resolverService.resolveAsync(activeWorkspace, shellLaunchConfig.args);
 				}
 				return { executable, args: resolvedArgs };
 			}
 
 			const executable = terminalEnvironment.getDefaultShell(
 				(key) => args.configuration[key],
-				args.isWorkspaceShellAllowed,
-				await getSystemShell(platform.platform, process.env as platform.IProcessEnvironment),
+				await getSystemShell(platform.OS, process.env as platform.IProcessEnvironment),
 				process.env.hasOwnProperty('PROCESSOR_ARCHITEW6432'),
 				process.env.windir,
 				resolver,
@@ -594,7 +594,6 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 
 			const resolvedArgs = terminalEnvironment.getDefaultShellArgs(
 				(key) => args.configuration[key],
-				args.isWorkspaceShellAllowed,
 				false, // useAutomationShell
 				resolver,
 				this.logService,
@@ -625,7 +624,7 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 		logger.debug('Resolved shell launch configuration', field('id', terminalId));
 
 		// Use instead of `terminal.integrated.env.${platform}` to make types work.
-		const getEnvFromConfig = (): terminal.ISingleTerminalConfiguration<ITerminalEnvironment> => {
+		const getEnvFromConfig = (): ITerminalEnvironment => {
 			if (platform.isWindows) {
 				return args.configuration['terminal.integrated.env.windows'];
 			} else if (platform.isMacintosh) {
@@ -635,7 +634,7 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 		};
 
 		const getNonInheritedEnv = async (): Promise<platform.IProcessEnvironment> => {
-			const env = await getMainProcessParentEnv();
+			const env = await getMainProcessParentEnv(process.env);
 			env.VSCODE_IPC_HOOK_CLI = process.env['VSCODE_IPC_HOOK_CLI']!;
 			return env;
 		};
@@ -644,7 +643,6 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 			shellLaunchConfig,
 			getEnvFromConfig(),
 			resolver,
-			args.isWorkspaceShellAllowed,
 			product.version,
 			args.configuration['terminal.integrated.detectLocale'],
 			args.configuration['terminal.integrated.inheritEnv'] !== false
