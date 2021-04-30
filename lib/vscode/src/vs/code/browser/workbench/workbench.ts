@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IWorkbenchConstructionOptions, create, ICredentialsProvider, IURLCallbackProvider, IWorkspaceProvider, IWorkspace, IWindowIndicator, IProductQualityChangeHandler, ISettingsSyncOptions } from 'vs/workbench/workbench.web.api';
+import { IWorkbenchConstructionOptions, create, ICredentialsProvider, IURLCallbackProvider, IWorkspaceProvider, IWorkspace, IWindowIndicator, IProductQualityChangeHandler, ISettingsSyncOptions, IHomeIndicator } from 'vs/workbench/workbench.web.api';
 import { URI, UriComponents } from 'vs/base/common/uri';
 import { Event, Emitter } from 'vs/base/common/event';
 import { generateUuid } from 'vs/base/common/uuid';
@@ -18,6 +18,7 @@ import { localize } from 'vs/nls';
 import { Schemas } from 'vs/base/common/network';
 import product from 'vs/platform/product/common/product';
 import { encodePath } from 'vs/server/node/util';
+import { parseLogLevel } from 'vs/platform/log/common/log';
 
 function doCreateUri(path: string, queryValues: Map<string, string>): URI {
 	let query: string | undefined = undefined;
@@ -422,6 +423,50 @@ class WindowIndicator implements IWindowIndicator {
 		...JSON.parse(configElementAttribute),
 	};
 
+	// Find workspace to open and payload
+	let foundWorkspace = false;
+	let workspace: IWorkspace;
+	let payload = Object.create(null);
+	let logLevel: string | undefined = undefined;
+
+	const query = new URL(document.location.href).searchParams;
+	query.forEach((value, key) => {
+		switch (key) {
+
+			// Folder
+			case WorkspaceProvider.QUERY_PARAM_FOLDER:
+				workspace = { folderUri: URI.parse(value) };
+				foundWorkspace = true;
+				break;
+
+			// Workspace
+			case WorkspaceProvider.QUERY_PARAM_WORKSPACE:
+				workspace = { workspaceUri: URI.parse(value) };
+				foundWorkspace = true;
+				break;
+
+			// Empty
+			case WorkspaceProvider.QUERY_PARAM_EMPTY_WINDOW:
+				workspace = undefined;
+				foundWorkspace = true;
+				break;
+
+			// Payload
+			case WorkspaceProvider.QUERY_PARAM_PAYLOAD:
+				try {
+					payload = JSON.parse(value);
+				} catch (error) {
+					console.error(error); // possible invalid JSON
+				}
+				break;
+
+			// Log level
+			case 'logLevel':
+				logLevel = value;
+				break;
+		}
+	});
+
 	// Strip the protocol from the authority if it exists.
 	const normalizeAuthority = (authority: string): string => authority.replace(/^https?:\/\//, '');
 	if (config.remoteAuthority) {
@@ -433,11 +478,6 @@ class WindowIndicator implements IWindowIndicator {
 	if (config.folderUri && config.folderUri.authority) {
 		config.folderUri.authority = normalizeAuthority(config.folderUri.authority);
 	}
-
-	// Find workspace to open and payload
-	let foundWorkspace = false;
-	let workspace: IWorkspace;
-	let payload = config.workspaceProvider?.payload || Object.create(null);
 
 	// If no workspace is provided through the URL, check for config attribute from server
 	if (!foundWorkspace) {
@@ -452,6 +492,14 @@ class WindowIndicator implements IWindowIndicator {
 
 	// Workspace Provider
 	const workspaceProvider = new WorkspaceProvider(workspace, payload);
+
+	// NOTE@coder: copied from upstream, modified to use our repo
+	// Home Indicator
+	const homeIndicator: IHomeIndicator = {
+		href: 'https://github.com/cdr/code-server',
+		icon: 'code',
+		title: localize('home', "Home")
+	};
 
 	// Window indicator (unless connected to a remote)
 	let windowIndicator: WindowIndicator | undefined = undefined;
@@ -495,14 +543,12 @@ class WindowIndicator implements IWindowIndicator {
 	// Finally create workbench
 	create(document.body, {
 		...config,
-<<<<<<< HEAD
-=======
 		developmentOptions: {
 			logLevel: logLevel ? parseLogLevel(logLevel) : undefined,
 			...config.developmentOptions
 		},
->>>>>>> 58ce849223667f77dc0d6d7658870ca3f815e17f
 		settingsSyncOptions,
+		homeIndicator,
 		windowIndicator,
 		productQualityChangeHandler,
 		workspaceProvider,
