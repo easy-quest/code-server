@@ -32,10 +32,10 @@ xterm-addon-search@0.8.0:
   resolved "https://registry.yarnpkg.com/xterm-addon-search/-/xterm-addon-search-0.8.0.tgz#e33eab918df7eac7e7baf95dd2b3d14133754881"
   integrity sha512-MPJGPVPpHRUw9cLIuqQbrVepmENMOybVUSxIALz5h1ryyQBrVqVujq2hL5aroX5/dZJoHx9lGHQTVLQ07SKgKA==
 
-xterm-addon-unicode11@0.3.0-beta.3:
-  version "0.3.0-beta.3"
-  resolved "https://registry.yarnpkg.com/xterm-addon-unicode11/-/xterm-addon-unicode11-0.3.0-beta.3.tgz#70af2dfb67809258edb62c19e2861f7ce5ccf5cd"
-  integrity sha512-vaYopnOjn19wCLDCyIWPWLwKR7CvLPxB5YZ3CAxt9qL05o3symxIJJJC0DuCa4GaGKVjNc7EmjRCs5bsJ2O1tw==
+xterm-addon-unicode11@0.6.0:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/xterm-addon-unicode11/-/xterm-addon-unicode11-0.6.0.tgz#733fd17bdf2ae6e818493db1d41241c999de0786"
+  integrity sha512-5pkb8YoS/deRtNqQRw8t640mu+Ga8B2MG3RXGQu0bwgcfr8XiXIRI880TWM49ICAHhTmnOLPzIIBIjEnCq7k2A==
 
 xterm-addon-webgl@0.10.0:
   version "0.10.0"
