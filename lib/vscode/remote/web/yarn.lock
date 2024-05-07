@@ -27,10 +27,10 @@ vscode-textmate@5.2.0:
   resolved "https://registry.yarnpkg.com/vscode-textmate/-/vscode-textmate-5.2.0.tgz#01f01760a391e8222fe4f33fbccbd1ad71aed74e"
   integrity sha512-Uw5ooOQxRASHgu6C7GVvUxisKXfSgW4oFlO+aa+PAkgmH89O3CXxEEzNRNtHSqtXFTl0nAC1uYj0GMSH27uwtQ==
 
-xterm-addon-search@0.8.0:
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/xterm-addon-search/-/xterm-addon-search-0.8.0.tgz#e33eab918df7eac7e7baf95dd2b3d14133754881"
-  integrity sha512-MPJGPVPpHRUw9cLIuqQbrVepmENMOybVUSxIALz5h1ryyQBrVqVujq2hL5aroX5/dZJoHx9lGHQTVLQ07SKgKA==
+xterm-addon-search@0.13.0:
+  version "0.13.0"
+  resolved "https://registry.yarnpkg.com/xterm-addon-search/-/xterm-addon-search-0.13.0.tgz#21286f4db48aa949fbefce34bb8bc0c9d3cec627"
+  integrity sha512-sDUwG4CnqxUjSEFh676DlS3gsh3XYCzAvBPSvJ5OPgF3MRL3iHLPfsb06doRicLC2xXNpeG2cWk8x1qpESWJMA==
 
 xterm-addon-unicode11@0.3.0-beta.3:
   version "0.3.0-beta.3"
